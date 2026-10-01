@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUAE Outputs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #14212b;
+            --ink-soft: #3d5160;
+            --muted: #6b7f8d;
+            --line: rgba(20, 33, 43, 0.1);
+            --surface: rgba(255, 252, 247, 0.82);
+            --surface-solid: #fffaf3;
+            --accent: #0f766e;
+            --accent-deep: #0b5c56;
+            --accent-soft: rgba(15, 118, 110, 0.12);
+            --warn: #b45309;
+            --danger: #b42318;
+            --json: #0f766e;
+            --xlsx: #b45309;
+            --img: #0369a1;
+            --txt: #475569;
+            --radius: 14px;
+            --shadow: 0 18px 40px rgba(20, 33, 43, 0.08);
+            --font-display: "Sora", sans-serif;
+            --font-body: "IBM Plex Sans", sans-serif;
+            --font-mono: "IBM Plex Mono", monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--ink);
+            background:
+                radial-gradient(ellipse 80% 50% at 10% -10%, rgba(15, 118, 110, 0.18), transparent 55%),
+                radial-gradient(ellipse 60% 45% at 100% 0%, rgba(180, 83, 9, 0.12), transparent 50%),
+                linear-gradient(165deg, #e8eef1 0%, #f4efe6 48%, #e7ece8 100%);
+            background-attachment: fixed;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(20, 33, 43, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(20, 33, 43, 0.03) 1px, transparent 1px);
+            background-size: 28px 28px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55), transparent 85%);
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 28px 20px 48px;
+            animation: riseIn 0.55s ease both;
+        }
+
+        @keyframes riseIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulseSoft {
+            0%, 100% { opacity: 0.45; }
+            50% { opacity: 1; }
+        }
+
+        header.hero {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 28px;
+            padding-bottom: 22px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .brand-block {
+            max-width: 640px;
+        }
+
+        .brand {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 4vw, 2.75rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            margin: 0 0 10px;
+            color: var(--ink);
+        }
+
+        .brand span {
+            color: var(--accent);
+        }
+
+        .lede {
+            margin: 0;
+            color: var(--ink-soft);
+            font-size: 1.05rem;
+            line-height: 1.5;
+            max-width: 42ch;
+        }
+
+        .meta-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .stat {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            backdrop-filter: blur(8px);
+        }
+
+        .stat strong {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .stat span {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+
+        .status-dot.is-error { background: var(--danger); box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.15); }
+        .status-dot.is-loading { animation: pulseSoft 1.2s ease infinite; }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(280px, 1.05fr) minmax(280px, 1fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+            overflow: hidden;
+            min-height: 520px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.15));
+        }
+
+        .panel-head h2 {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1 1 180px;
+        }
+
+        .search-wrap input,
+        .filter-select {
+            width: 100%;
+            appearance: none;
+            border: 1px solid var(--line);
+            background: var(--surface-solid);
+            color: var(--ink);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: 500 0.92rem/1.2 var(--font-body);
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .search-wrap input:focus,
+        .filter-select:focus {
+            border-color: rgba(15, 118, 110, 0.45);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .filter-select {
+            flex: 0 1 140px;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7f8d' d='M1.4 1.2 6 5.8l4.6-4.6 1.1 1.1L6 8 0.3 2.3z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+
+        .file-list {
+            list-style: none;
+            margin: 0;
+            padding: 10px;
+            overflow-y: auto;
+            flex: 1;
+            max-height: min(68vh, 720px);
+        }
+
+        .file-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+            animation: fadeSlide 0.35s ease both;
+        }
+
+        .file-item:hover {
+            background: rgba(15, 118, 110, 0.06);
+            border-color: rgba(15, 118, 110, 0.12);
+        }
+
+        .file-item.is-active {
+            background: var(--accent-soft);
+            border-color: rgba(15, 118, 110, 0.28);
+            transform: translateX(2px);
+        }
+
+        .type-badge {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: #fff;
+            background: var(--txt);
+        }
+
+        .type-badge.json { background: var(--json); }
+        .type-badge.xlsx { background: var(--xlsx); }
+        .type-badge.img { background: var(--img); }
+        .type-badge.txt { background: var(--txt); }
+
+        .file-meta {
+            min-width: 0;
+        }
+
+        .file-name {
+            margin: 0 0 4px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-path {
+            margin: 0;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 6px;
+            opacity: 0.7;
+            transition: opacity 0.18s ease;
+        }
+
+        .file-item:hover .file-actions,
+        .file-item.is-active .file-actions {
+            opacity: 1;
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid var(--line);
+            background: var(--surface-solid);
+            color: var(--ink);
+            border-radius: 9px;
+            padding: 7px 10px;
+            font: 600 0.78rem/1 var(--font-body);
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+        }
+
+        .btn:hover {
+            border-color: rgba(15, 118, 110, 0.35);
+            color: var(--accent-deep);
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn.primary:hover {
+            background: var(--accent-deep);
+            color: #fff;
+        }
+
+        .empty-state,
+        .error-state,
+        .loading-state {
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty-state h3,
+        .error-state h3,
+        .loading-state h3 {
+            margin: 0 0 8px;
+            font-family: var(--font-display);
+            color: var(--ink);
+            font-size: 1.05rem;
+        }
+
+        .error-state { color: var(--danger); }
+        .error-state h3 { color: var(--danger); }
+
+        .loading-bar {
+            width: 120px;
+            height: 3px;
+            margin: 16px auto 0;
+            border-radius: 999px;
+            background: rgba(15, 118, 110, 0.15);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loading-bar::after {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 40%;
+            background: var(--accent);
+            animation: loadSlide 1s ease infinite;
+        }
+
+        @keyframes loadSlide {
+            from { left: -40%; }
+            to { left: 100%; }
+        }
+
+        .preview-body {
+            padding: 18px;
+            overflow: auto;
+            flex: 1;
+            max-height: min(68vh, 720px);
+        }
+
+        .preview-title {
+            margin: 0 0 4px;
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .preview-sub {
+            margin: 0 0 16px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--muted);
+            word-break: break-all;
+        }
+
+        .preview-placeholder {
+            display: grid;
+            place-items: center;
+            min-height: 360px;
+            text-align: center;
+            color: var(--muted);
+            padding: 24px;
+        }
+
+        .preview-placeholder .mark {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            margin: 0 auto 16px;
+            background:
+                linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(180, 83, 9, 0.12));
+            border: 1px solid var(--line);
+        }
+
+        pre {
+            margin: 0;
+            padding: 16px;
+            border-radius: 12px;
+            background: #132029;
+            color: #d7e6ef;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            line-height: 1.55;
+            overflow: auto;
+            max-height: 56vh;
+            animation: fadeSlide 0.3s ease both;
+        }
+
+        .preview-body img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            animation: fadeSlide 0.3s ease both;
+        }
+
+        .download-callout {
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px dashed rgba(180, 83, 9, 0.35);
+            background: rgba(180, 83, 9, 0.06);
+            animation: fadeSlide 0.3s ease both;
+        }
+
+        .download-callout p {
+            margin: 0 0 14px;
+            color: var(--ink-soft);
+        }
+
+        .folder-group {
+            margin: 6px 4px 14px;
+        }
+
+        .folder-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 6px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .folder-label::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .panel {
+                min-height: 0;
+            }
+
+            .file-list,
+            .preview-body {
+                max-height: none;
+            }
+
+            .preview-placeholder {
+                min-height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="hero">
+            <div class="brand-block">
+                <h1 class="brand">DUAE <span>Outputs</span></h1>
+                <p class="lede">Browse and preview every file in your R2 bucket — search, filter, and open results in one place.</p>
+            </div>
+            <div class="meta-strip">
+                <div class="stat">
+                    <span class="status-dot is-loading" id="statusDot"></span>
+                    <strong id="fileCount">—</strong>
+                    <span>files</span>
+                </div>
+                <div class="stat">
+                    <strong id="visibleCount">—</strong>
+                    <span>shown</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <section class="panel" aria-label="File browser">
+                <div class="panel-head">
+                    <h2>Bucket files</h2>
+                    <div class="toolbar">
+                        <div class="search-wrap">
+                            <input id="searchInput" type="search" placeholder="Search by name or path…" autocomplete="off">
+                        </div>
+                        <select id="typeFilter" class="filter-select" aria-label="Filter by file type">
+                            <option value="all">All types</option>
+                            <option value="json">JSON</option>
+                            <option value="xlsx">Excel</option>
+                            <option value="img">Images</option>
+                            <option value="txt">Text</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <ul id="fileList" class="file-list">
+                    <li class="loading-state">
+                        <h3>Loading bucket</h3>
+                        <p>Fetching object list from the worker…</p>
+                        <div class="loading-bar"></div>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="panel" aria-label="File preview">
+                <div class="panel-head">
+                    <h2>Preview</h2>
+                    <div id="previewActions"></div>
+                </div>
+                <div class="preview-body" id="previewContainer">
+                    <div class="preview-placeholder">
+                        <div>
+                            <div class="mark"></div>
+                            <h3 class="preview-title" style="margin-bottom:8px;">Nothing selected</h3>
+                            <p>Pick a file from the list to preview JSON, images, or download other formats.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const WORKER_URL = "https://data-view.lili62626hdh.workers.dev";
+        let allFiles = [];
+        let activeKey = null;
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function fileType(key) {
+            const lower = key.toLowerCase();
+            if (lower.endsWith(".json")) return "json";
+            if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) return "xlsx";
+            if (/\.(png|jpg|jpeg|webp|gif)$/i.test(lower)) return "img";
+            if (lower.endsWith(".txt") || lower.endsWith(".csv") || lower.endsWith(".log")) return "txt";
+            return "other";
+        }
+
+        function typeLabel(type) {
+            return ({ json: "json", xlsx: "xlsx", img: "img", txt: "txt", other: "file" })[type] || "file";
+        }
+
+        function folderOf(key) {
+            const parts = key.split("/");
+            if (parts.length <= 1) return "root";
+            return parts.slice(0, -1).join("/");
+        }
+
+        function setStatus(kind) {
+            const dot = document.getElementById("statusDot");
+            dot.className = "status-dot" + (kind ? ` is-${kind}` : "");
+        }
+
+        function filteredFiles() {
+            const q = document.getElementById("searchInput").value.trim().toLowerCase();
+            const type = document.getElementById("typeFilter").value;
+            return allFiles.filter(key => {
+                const matchesQuery = !q || key.toLowerCase().includes(q);
+                const matchesType = type === "all" || fileType(key) === type;
+                return matchesQuery && matchesType;
+            });
+        }
+
+        function renderList() {
+            const listEl = document.getElementById("fileList");
+            const files = filteredFiles();
+            document.getElementById("visibleCount").textContent = String(files.length);
+
+            if (!files.length) {
+                listEl.innerHTML = `
+                    <li class="empty-state">
+                        <h3>No matching files</h3>
+                        <p>Try a different search or clear the type filter.</p>
+                    </li>`;
+                return;
+            }
+
+            const groups = new Map();
+            files.forEach(key => {
+                const folder = folderOf(key);
+                if (!groups.has(folder)) groups.set(folder, []);
+                groups.get(folder).push(key);
+            });
+
+            let html = "";
+            let delay = 0;
+            for (const [folder, keys] of groups) {
+                html += `<li class="folder-group">
+                    <div class="folder-label">${escapeHtml(folder)}</div>
+                    <ul style="list-style:none;margin:0;padding:0;">`;
+                keys.forEach(key => {
+                    const name = key.split("/").pop();
+                    const type = fileType(key);
+                    const active = key === activeKey ? " is-active" : "";
+                    html += `
+                        <li class="file-item${active}" data-key="${escapeHtml(key)}" style="animation-delay:${delay}ms">
+                            <div class="type-badge ${type}">${typeLabel(type)}</div>
+                            <div class="file-meta">
+                                <p class="file-name">${escapeHtml(name)}</p>
+                                <p class="file-path">${escapeHtml(key)}</p>
+                            </div>
+                            <div class="file-actions">
+                                <a class="btn" href="${WORKER_URL}/${encodeURI(key)}" target="_blank" download onclick="event.stopPropagation()">Download</a>
+                            </div>
+                        </li>`;
+                    delay = Math.min(delay + 18, 220);
+                });
+                html += `</ul></li>`;
+            }
+            listEl.innerHTML = html;
+
+            listEl.querySelectorAll(".file-item").forEach(item => {
+                item.addEventListener("click", () => {
+                    const key = item.getAttribute("data-key");
+                    loadPreview(key);
+                });
+            });
+        }
+
+        async function fetchFiles() {
+            const listEl = document.getElementById("fileList");
+            setStatus("loading");
+            try {
+                const response = await fetch(`${WORKER_URL}/api/list`);
+                if (!response.ok) {
+                    const errText = await response.text();
+                    setStatus("error");
+                    document.getElementById("fileCount").textContent = "0";
+                    document.getElementById("visibleCount").textContent = "0";
+                    listEl.innerHTML = `
+                        <li class="error-state">
+                            <h3>Worker error (${response.status})</h3>
+                            <p>${escapeHtml(errText)}</p>
+                        </li>`;
+                    return;
+                }
+
+                const files = await response.json();
+                allFiles = Array.isArray(files) ? files.slice().sort() : [];
+                document.getElementById("fileCount").textContent = String(allFiles.length);
+                setStatus(allFiles.length ? "" : "error");
+
+                if (!allFiles.length) {
+                    document.getElementById("visibleCount").textContent = "0";
+                    listEl.innerHTML = `
+                        <li class="empty-state">
+                            <h3>Bucket is empty</h3>
+                            <p>No objects were returned from R2.</p>
+                        </li>`;
+                    return;
+                }
+
+                renderList();
+            } catch (err) {
+                setStatus("error");
+                document.getElementById("fileCount").textContent = "0";
+                document.getElementById("visibleCount").textContent = "0";
+                listEl.innerHTML = `
+                    <li class="error-state">
+                        <h3>Network / CORS error</h3>
+                        <p>${escapeHtml(err.message)}</p>
+                    </li>`;
+            }
+        }
+
+        async function loadPreview(key) {
+            activeKey = key;
+            renderList();
+
+            const name = key.split("/").pop();
+            const url = `${WORKER_URL}/${encodeURI(key)}`;
+            const container = document.getElementById("previewContainer");
+            const actions = document.getElementById("previewActions");
+            const type = fileType(key);
+
+            actions.innerHTML = `<a class="btn primary" href="${url}" target="_blank" download>Download</a>`;
+            container.innerHTML = `
+                <h3 class="preview-title">${escapeHtml(name)}</h3>
+                <p class="preview-sub">${escapeHtml(key)}</p>
+                <div class="loading-state" style="padding:24px 0">
+                    <p>Loading preview…</p>
+                    <div class="loading-bar"></div>
+                </div>`;
+
+            try {
+                if (type === "json") {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+                    const data = await res.json();
+                    container.innerHTML = `
+                        <h3 class="preview-title">${escapeHtml(name)}</h3>
+                        <p class="preview-sub">${escapeHtml(key)}</p>
+                        <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+                } else if (type === "img") {
+                    container.innerHTML = `
+                        <h3 class="preview-title">${escapeHtml(name)}</h3>
+                        <p class="preview-sub">${escapeHtml(key)}</p>
+                        <img src="${url}" alt="${escapeHtml(name)}">`;
+                } else if (type === "txt") {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+                    const text = await res.text();
+                    container.innerHTML = `
+                        <h3 class="preview-title">${escapeHtml(name)}</h3>
+                        <p class="preview-sub">${escapeHtml(key)}</p>
+                        <pre>${escapeHtml(text)}</pre>`;
+                } else if (type === "xlsx") {
+                    container.innerHTML = `
+                        <h3 class="preview-title">${escapeHtml(name)}</h3>
+                        <p class="preview-sub">${escapeHtml(key)}</p>
+                        <div class="download-callout">
+                            <p>Excel workbooks can’t be rendered in-browser. Download the file to open it locally.</p>
+                            <a class="btn primary" href="${url}" target="_blank" download>Download spreadsheet</a>
+                        </div>`;
+                } else {
+                    container.innerHTML = `
+                        <h3 class="preview-title">${escapeHtml(name)}</h3>
+                        <p class="preview-sub">${escapeHtml(key)}</p>
+                        <div class="download-callout">
+                            <p>No inline preview for this file type. Open or download it instead.</p>
+                            <a class="btn primary" href="${url}" target="_blank">Open file</a>
+                        </div>`;
+                }
+            } catch (err) {
+                container.innerHTML = `
+                    <h3 class="preview-title">${escapeHtml(name)}</h3>
+                    <p class="preview-sub">${escapeHtml(key)}</p>
+                    <div class="error-state" style="padding:12px 0;text-align:left">
+                        <h3>Preview failed</h3>
+                        <p>${escapeHtml(err.message)}</p>
+                    </div>`;
+            }
+        }
+
+        document.getElementById("searchInput").addEventListener("input", renderList);
+        document.getElementById("typeFilter").addEventListener("change", renderList);
+        fetchFiles();
+    </script>
+</body>
+</html>
