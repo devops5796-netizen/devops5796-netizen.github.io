@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DUAE Outputs</title>
+    <title>Data View - Outputs</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
@@ -587,7 +587,7 @@
     </div>
 
     <script>
-        const WORKER_URL = "https://data-view.lili62626hdh.workers.dev";
+        const WORKER_URL = "https://duaeview.lili62626hdh.workers.dev";
         let allFiles = [];
         let activeKey = null;
 
@@ -694,7 +694,14 @@
             const listEl = document.getElementById("fileList");
             setStatus("loading");
             try {
-                const response = await fetch(`${WORKER_URL}/api/list`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+                const response = await fetch(`${WORKER_URL}/api/list`, {
+                    signal: controller.signal,
+                    mode: "cors",
+                });
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
                     const errText = await response.text();
                     setStatus("error");
@@ -708,8 +715,13 @@
                     return;
                 }
 
-                const files = await response.json();
-                allFiles = Array.isArray(files) ? files.slice().sort() : [];
+                const payload = await response.json();
+                const files = Array.isArray(payload)
+                    ? payload
+                    : Array.isArray(payload.keys)
+                      ? payload.keys
+                      : [];
+                allFiles = files.slice().sort();
                 document.getElementById("fileCount").textContent = String(allFiles.length);
                 setStatus(allFiles.length ? "" : "error");
 
@@ -728,10 +740,16 @@
                 setStatus("error");
                 document.getElementById("fileCount").textContent = "0";
                 document.getElementById("visibleCount").textContent = "0";
+                const timedOut = err.name === "AbortError";
                 listEl.innerHTML = `
                     <li class="error-state">
-                        <h3>Network / CORS error</h3>
+                        <h3>${timedOut ? "Worker timed out" : "Cannot reach worker"}</h3>
                         <p>${escapeHtml(err.message)}</p>
+                        <p style="color:var(--muted);margin-top:10px">
+                          Check that <code>${escapeHtml(WORKER_URL)}</code> is deployed,
+                          the <code>tbview</code> R2 binding is attached, then hard-refresh this page.
+                          Prefer opening the HTML via http (GitHub Pages / live server), not as a local file.
+                        </p>
                     </li>`;
             }
         }
