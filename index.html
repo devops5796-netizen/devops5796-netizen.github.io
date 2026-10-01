@@ -501,6 +501,69 @@
             background: var(--line);
         }
 
+        .path-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .breadcrumb {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--muted);
+            min-width: 0;
+            flex: 1 1 180px;
+        }
+
+        .breadcrumb button {
+            appearance: none;
+            border: none;
+            background: transparent;
+            color: var(--accent-deep);
+            font: inherit;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 6px;
+        }
+
+        .breadcrumb button:hover {
+            background: var(--accent-soft);
+        }
+
+        .breadcrumb .sep { opacity: 0.45; }
+
+        .prefix-input {
+            flex: 1 1 160px;
+            appearance: none;
+            border: 1px solid var(--line);
+            background: var(--surface-solid);
+            color: var(--ink);
+            border-radius: 10px;
+            padding: 10px 12px;
+            font: 500 0.88rem/1.2 var(--font-mono);
+            outline: none;
+        }
+
+        .prefix-input:focus {
+            border-color: rgba(15, 118, 110, 0.45);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .folder-item .type-badge {
+            background: #334155;
+        }
+
+        .folder-item .file-name {
+            color: var(--accent-deep);
+        }
+
         @media (max-width: 900px) {
             .workspace {
                 grid-template-columns: 1fr;
@@ -546,6 +609,11 @@
                 <div class="panel-head">
                     <h2>Bucket files</h2>
                     <div class="toolbar">
+                        <div class="path-bar">
+                            <nav class="breadcrumb" id="breadcrumb" aria-label="Prefix path"></nav>
+                            <input id="prefixInput" class="prefix-input" type="text" placeholder="Prefix e.g. reports/2024/" autocomplete="off">
+                            <button type="button" class="btn primary" id="goPrefixBtn">Go</button>
+                        </div>
                         <div class="search-wrap">
                             <input id="searchInput" type="search" placeholder="Search by name or path…" autocomplete="off">
                         </div>
@@ -589,6 +657,8 @@
     <script>
         const WORKER_URL = "https://data-view.lili62626hdh.workers.dev";
         let allFiles = [];
+        let folders = [];
+        let currentPrefix = "";
         let activeKey = null;
 
         function escapeHtml(str) {
@@ -613,15 +683,40 @@
             return ({ json: "json", xlsx: "xlsx", img: "img", txt: "txt", other: "file" })[type] || "file";
         }
 
-        function folderOf(key) {
-            const parts = key.split("/");
-            if (parts.length <= 1) return "root";
-            return parts.slice(0, -1).join("/");
+        function normalizePrefix(raw) {
+            let p = String(raw || "").trim().replace(/^\/+/, "");
+            if (p && !p.endsWith("/")) p += "/";
+            return p;
+        }
+
+        function folderDisplayName(folderPrefix) {
+            const clean = folderPrefix.replace(/\/$/, "");
+            const base = currentPrefix ? clean.slice(currentPrefix.length) : clean;
+            return base || clean;
         }
 
         function setStatus(kind) {
             const dot = document.getElementById("statusDot");
             dot.className = "status-dot" + (kind ? ` is-${kind}` : "");
+        }
+
+        function renderBreadcrumb() {
+            const nav = document.getElementById("breadcrumb");
+            const parts = currentPrefix ? currentPrefix.replace(/\/$/, "").split("/") : [];
+            let html = `<button type="button" data-prefix="">root</button>`;
+            let built = "";
+            parts.forEach((part, i) => {
+                built += part + "/";
+                html += `<span class="sep">/</span><button type="button" data-prefix="${escapeHtml(built)}">${escapeHtml(part)}</button>`;
+            });
+            if (!parts.length) html += `<span class="sep">/</span><span>(all top-level)</span>`;
+            nav.innerHTML = html;
+            nav.querySelectorAll("button[data-prefix]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    navigateToPrefix(btn.getAttribute("data-prefix") || "");
+                });
+            });
+            document.getElementById("prefixInput").value = currentPrefix;
         }
 
         function filteredFiles() {
@@ -634,34 +729,54 @@
             });
         }
 
+        function filteredFolders() {
+            const q = document.getElementById("searchInput").value.trim().toLowerCase();
+            if (!q) return folders;
+            return folders.filter(f => f.toLowerCase().includes(q));
+        }
+
         function renderList() {
             const listEl = document.getElementById("fileList");
+            const visibleFolders = filteredFolders();
             const files = filteredFiles();
-            document.getElementById("visibleCount").textContent = String(files.length);
+            document.getElementById("visibleCount").textContent = String(visibleFolders.length + files.length);
+            renderBreadcrumb();
 
-            if (!files.length) {
+            if (!visibleFolders.length && !files.length) {
                 listEl.innerHTML = `
                     <li class="empty-state">
-                        <h3>No matching files</h3>
-                        <p>Try a different search or clear the type filter.</p>
+                        <h3>Nothing in this prefix</h3>
+                        <p>Try another folder, clear search, or enter a different prefix.</p>
                     </li>`;
                 return;
             }
 
-            const groups = new Map();
-            files.forEach(key => {
-                const folder = folderOf(key);
-                if (!groups.has(folder)) groups.set(folder, []);
-                groups.get(folder).push(key);
-            });
-
             let html = "";
             let delay = 0;
-            for (const [folder, keys] of groups) {
-                html += `<li class="folder-group">
-                    <div class="folder-label">${escapeHtml(folder)}</div>
-                    <ul style="list-style:none;margin:0;padding:0;">`;
-                keys.forEach(key => {
+
+            if (visibleFolders.length) {
+                html += `<li class="folder-group"><div class="folder-label">Folders</div><ul style="list-style:none;margin:0;padding:0;">`;
+                visibleFolders.forEach(folder => {
+                    const name = folderDisplayName(folder);
+                    html += `
+                        <li class="file-item folder-item" data-folder="${escapeHtml(folder)}" style="animation-delay:${delay}ms">
+                            <div class="type-badge">dir</div>
+                            <div class="file-meta">
+                                <p class="file-name">${escapeHtml(name)}/</p>
+                                <p class="file-path">${escapeHtml(folder)}</p>
+                            </div>
+                            <div class="file-actions">
+                                <button type="button" class="btn" data-open-folder="${escapeHtml(folder)}">Open</button>
+                            </div>
+                        </li>`;
+                    delay = Math.min(delay + 18, 220);
+                });
+                html += `</ul></li>`;
+            }
+
+            if (files.length) {
+                html += `<li class="folder-group"><div class="folder-label">Files</div><ul style="list-style:none;margin:0;padding:0;">`;
+                files.forEach(key => {
                     const name = key.split("/").pop();
                     const type = fileType(key);
                     const active = key === activeKey ? " is-active" : "";
@@ -680,23 +795,46 @@
                 });
                 html += `</ul></li>`;
             }
+
             listEl.innerHTML = html;
 
-            listEl.querySelectorAll(".file-item").forEach(item => {
-                item.addEventListener("click", () => {
-                    const key = item.getAttribute("data-key");
-                    loadPreview(key);
+            listEl.querySelectorAll("[data-folder], [data-open-folder]").forEach(el => {
+                el.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const folder = el.getAttribute("data-folder") || el.getAttribute("data-open-folder");
+                    if (folder) navigateToPrefix(folder);
                 });
             });
+
+            listEl.querySelectorAll(".file-item[data-key]").forEach(item => {
+                item.addEventListener("click", () => {
+                    loadPreview(item.getAttribute("data-key"));
+                });
+            });
+        }
+
+        async function navigateToPrefix(prefix) {
+            currentPrefix = normalizePrefix(prefix);
+            await fetchFiles();
         }
 
         async function fetchFiles() {
             const listEl = document.getElementById("fileList");
             setStatus("loading");
+            listEl.innerHTML = `
+                <li class="loading-state">
+                    <h3>Loading ${currentPrefix ? escapeHtml(currentPrefix) : "bucket root"}</h3>
+                    <p>Fetching folders and files…</p>
+                    <div class="loading-bar"></div>
+                </li>`;
+
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 25000);
-                const response = await fetch(`${WORKER_URL}/api/list`, {
+                const qs = new URLSearchParams();
+                if (currentPrefix) qs.set("prefix", currentPrefix);
+                qs.set("delimiter", "/");
+                const response = await fetch(`${WORKER_URL}/api/list?${qs.toString()}`, {
                     signal: controller.signal,
                     mode: "cors",
                 });
@@ -716,25 +854,17 @@
                 }
 
                 const payload = await response.json();
+                folders = Array.isArray(payload.folders) ? payload.folders.slice().sort() : [];
                 const files = Array.isArray(payload)
                     ? payload
                     : Array.isArray(payload.keys)
                       ? payload.keys
                       : [];
                 allFiles = files.slice().sort();
-                document.getElementById("fileCount").textContent = String(allFiles.length);
-                setStatus(allFiles.length ? "" : "error");
+                if (typeof payload.prefix === "string") currentPrefix = payload.prefix;
 
-                if (!allFiles.length) {
-                    document.getElementById("visibleCount").textContent = "0";
-                    listEl.innerHTML = `
-                        <li class="empty-state">
-                            <h3>Bucket is empty</h3>
-                            <p>No objects were returned from R2.</p>
-                        </li>`;
-                    return;
-                }
-
+                document.getElementById("fileCount").textContent = String(folders.length + allFiles.length);
+                setStatus((folders.length || allFiles.length) ? "" : "error");
                 renderList();
             } catch (err) {
                 setStatus("error");
@@ -746,9 +876,7 @@
                         <h3>${timedOut ? "Worker timed out" : "Cannot reach worker"}</h3>
                         <p>${escapeHtml(err.message)}</p>
                         <p style="color:var(--muted);margin-top:10px">
-                          Check that <code>${escapeHtml(WORKER_URL)}</code> is deployed,
-                          the <code>tbview</code> R2 binding is attached, then hard-refresh this page.
-                          Prefer opening the HTML via http (GitHub Pages / live server), not as a local file.
+                          Redeploy <code>backend2.js</code>, confirm <code>tbview</code> binding, then hard-refresh.
                         </p>
                     </li>`;
             }
@@ -825,6 +953,12 @@
 
         document.getElementById("searchInput").addEventListener("input", renderList);
         document.getElementById("typeFilter").addEventListener("change", renderList);
+        document.getElementById("goPrefixBtn").addEventListener("click", () => {
+            navigateToPrefix(document.getElementById("prefixInput").value);
+        });
+        document.getElementById("prefixInput").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") navigateToPrefix(e.target.value);
+        });
         fetchFiles();
     </script>
 </body>
